@@ -10,4 +10,4 @@ Disallow: /repositories.html
 Disallow: /logs.html
 Disallow: /onboarding.html
 
-Sitemap: https://commitoverflow.com/sitemap.xml
+Sitemap: https://commitoverflow.ceal.in/sitemap.xml
