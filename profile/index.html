@@ -449,9 +449,20 @@
                     <label class="form-label">Display Name</label>
                     <input type="text" id="input-display-name" class="form-control" value="" placeholder="Display Name" required>
                 </div>
-                <div class="form-group">
+                <div class="form-group college-autocomplete-wrapper">
                     <label class="form-label">College Name</label>
-                    <input type="text" id="input-college-name" class="form-control" value="" placeholder="College Name" required>
+                    <input
+                        type="text"
+                        id="input-college-name"
+                        class="form-control"
+                        placeholder="Start typing your college…"
+                        autocomplete="off"
+                        aria-autocomplete="list"
+                        aria-controls="college-dropdown"
+                        aria-expanded="false"
+                        required
+                    >
+                    <div id="college-dropdown" class="college-dropdown" role="listbox"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mb-2">
                     <div class="form-group">
@@ -520,6 +531,118 @@
             // Add custom cancel button handler
             document.getElementById('cancel-modal-btn').addEventListener('click', () => {
                 document.getElementById('edit-modal').classList.remove('active');
+            });
+
+            // ── College autocomplete ─────────────────────────────────────────
+            const collegeInput   = document.getElementById('input-college-name');
+            const collegeDropdown = document.getElementById('college-dropdown');
+            let allColleges = [];
+            let activeIdx   = -1;
+
+            try {
+                const baseUrl = await API.getBaseUrl();
+                const res = await fetch(`${baseUrl}/colleges`);
+                if (res.ok) allColleges = await res.json();
+            } catch (e) {
+                console.warn('Could not fetch colleges:', e);
+            }
+
+            function fuzzyMatch(str, pattern) {
+                pattern = pattern.toLowerCase().replace(/\s+/g, '');
+                str = str.toLowerCase();
+                let patternIdx = 0;
+                let strIdx = 0;
+                while (patternIdx < pattern.length && strIdx < str.length) {
+                    if (pattern[patternIdx] === str[strIdx]) {
+                        patternIdx++;
+                    }
+                    strIdx++;
+                }
+                return patternIdx === pattern.length;
+            }
+
+            function renderDropdown(query) {
+                const q = query.trim().toLowerCase();
+                collegeDropdown.innerHTML = '';
+                activeIdx = -1;
+
+                const matched = q
+                    ? allColleges.filter(c => fuzzyMatch(c, q))
+                    : allColleges.slice(0, 12);
+
+                matched.forEach((name, i) => {
+                    const opt = document.createElement('div');
+                    opt.className = 'college-option';
+                    opt.setAttribute('role', 'option');
+                    opt.textContent = name;
+                    opt.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        collegeInput.value = name;
+                        closeDropdown();
+                    });
+                    collegeDropdown.appendChild(opt);
+                });
+
+                const exactMatch = allColleges.some(c => c.toLowerCase() === q);
+                if (q && !exactMatch) {
+                    const addOpt = document.createElement('div');
+                    addOpt.className = 'college-option new-entry';
+                    addOpt.setAttribute('role', 'option');
+                    addOpt.innerHTML = `<i class="ph ph-plus-circle"></i>Use "<strong>${query.trim()}</strong>"`;
+                    addOpt.addEventListener('mousedown', (e) => {
+                        e.preventDefault();
+                        collegeInput.value = query.trim();
+                        closeDropdown();
+                    });
+                    collegeDropdown.appendChild(addOpt);
+                }
+
+                const hasItems = collegeDropdown.children.length > 0;
+                collegeDropdown.classList.toggle('open', hasItems);
+                collegeInput.setAttribute('aria-expanded', String(hasItems));
+            }
+
+            function closeDropdown() {
+                collegeDropdown.classList.remove('open');
+                collegeInput.setAttribute('aria-expanded', 'false');
+                activeIdx = -1;
+            }
+
+            function setActive(idx) {
+                const items = collegeDropdown.querySelectorAll('.college-option');
+                items.forEach((el, i) => el.classList.toggle('active', i === idx));
+                if (items[idx]) items[idx].scrollIntoView({ block: 'nearest' });
+                activeIdx = idx;
+            }
+
+            collegeInput.addEventListener('focus', () => renderDropdown(collegeInput.value));
+            collegeInput.addEventListener('input', () => renderDropdown(collegeInput.value));
+
+            collegeInput.addEventListener('keydown', (e) => {
+                const items = Array.from(collegeDropdown.querySelectorAll('.college-option'));
+                if (!items.length) return;
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setActive(Math.min(activeIdx + 1, items.length - 1));
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setActive(Math.max(activeIdx - 1, 0));
+                } else if (e.key === 'Enter' && activeIdx >= 0) {
+                    e.preventDefault();
+                    collegeInput.value = items[activeIdx].textContent.replace(/^[^\S\r\n]*\+[^\S\r\n]*Use "/, '').replace(/"$/, '');
+                    if (items[activeIdx].classList.contains('new-entry')) {
+                        collegeInput.value = collegeInput.value;
+                    }
+                    closeDropdown();
+                } else if (e.key === 'Escape') {
+                    closeDropdown();
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!collegeInput.contains(e.target) && !collegeDropdown.contains(e.target)) {
+                    closeDropdown();
+                }
             });
 
             const currentUser = API.getCurrentUser();
@@ -991,7 +1114,12 @@
                     const saveBtn = document.getElementById('save-profile-btn');
                     const originalText = saveBtn.textContent;
                     saveBtn.textContent = 'Saving...';
-                    saveBtn.disabled = true;
+                    const gitlabUsername = glInput ? glInput.value.trim() : '';
+
+                    if (college && college.length < 5) {
+                        Components.showToast("College name must be at least 5 characters long.", "error");
+                        return;
+                    }
                     
                     try {
                         await API.updateProfile(name, college, selectedTech, githubUsername, gitlabUsername);

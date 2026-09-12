@@ -202,12 +202,12 @@ const API = {
     return res;
   },
 
-  async fetchUserIssues(page = 1, limit = 10, tab = 'open') {
-    return this.request(`/users/me/issues?page=${page}&limit=${limit}&tab=${tab}`);
+  async fetchUserIssues(userId = 'me', page = 1, limit = 10, tab = 'open') {
+    return this.request(`/users/${userId}/issues?page=${page}&limit=${limit}&tab=${tab}`);
   },
 
-  async fetchUserPRs(page = 1, limit = 10) {
-    return this.request(`/users/me/prs?page=${page}&limit=${limit}`);
+  async fetchUserPRs(userId = 'me', page = 1, limit = 10) {
+    return this.request(`/users/${userId}/prs?page=${page}&limit=${limit}`);
   },
 
   async replyQuery(queryId, message) {

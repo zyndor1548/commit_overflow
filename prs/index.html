@@ -92,7 +92,7 @@
         
         <main class="main-content">
             <div class="page-header">
-                <h1>My Pull Requests</h1>
+                <h1 id="prs-page-title">My Pull Requests</h1>
                 <p class="text-secondary mt-1">Track code contributions, reviews, and point scores.</p>
             </div>
 
@@ -378,7 +378,10 @@
 
             const loadPRs = async () => {
                 try {
-                    const res = await API.fetchUserPRs(currentPage, currentLimit);
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const queryUserId = urlParams.get('user_id') || 'me';
+                    
+                    const res = await API.fetchUserPRs(queryUserId, currentPage, currentLimit);
                     allPRs = res.data || [];
 
                     // Populate repositories filter option list
@@ -394,6 +397,12 @@
                         opt.textContent = name;
                         repoFilter.appendChild(opt);
                     });
+
+                    if (queryUserId !== 'me') {
+                        document.getElementById('prs-page-title').textContent = "User's PRs";
+                    } else {
+                        document.getElementById('prs-page-title').textContent = "My PRs";
+                    }
 
                     renderPRs();
                     
