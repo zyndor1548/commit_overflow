@@ -369,7 +369,7 @@
                             item.className = 'detail-item';
                             item.innerHTML = `
                                 <div>
-                                    <strong>#${i.github_issue_id}</strong> — ${i.title}
+                                    <strong>#${i.issue_iid || i.github_issue_id}</strong> — ${i.title}
                                 </div>
                                 <div style="display: flex; align-items: center;">
                                     ${diffBadge}

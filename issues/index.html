@@ -349,9 +349,12 @@
                             `</div>`;
                     }
 
-                    // Format GitHub link
-                    // e.g. https://github.com/owner/repo/issues/12
-                    const githubLink = `${issue.repo_url}/issues/${issue.github_issue_id}`;
+                    // Format issue link — GitLab uses /-/issues/IID, GitHub uses /issues/ID
+                    const isGitLab = issue.repo_url && issue.repo_url.includes('gitlab.com');
+                    const issueNumber = issue.github_issue_id || 0; // github_issue_id from backend
+                    const issueLink = isGitLab
+                        ? `${issue.repo_url}/-/issues/${issueNumber}`
+                        : `${issue.repo_url}/issues/${issueNumber}`;
 
                     let metaHtml = `
                         <div class="issue-meta-info">
@@ -380,7 +383,7 @@
                                     <i class="ph ph-git-repository"></i> ${issue.repo_name}
                                 </a>
                                 <h3 style="margin: 0; font-size: 1.25rem;">
-                                    <a href="${githubLink}" target="_blank">#${issue.github_issue_id} - ${issue.title}</a>
+                                    <a href="${issueLink}" target="_blank">#${issueNumber} - ${issue.title}</a>
                                     <i class="ph ph-arrow-square-out" style="font-size: 0.85rem; color: var(--text-secondary);"></i>
                                 </h3>
                             </div>
