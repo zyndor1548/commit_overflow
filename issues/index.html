@@ -106,7 +106,7 @@
         
         <main class="main-content">
             <div class="page-header">
-                <h1>My Issues</h1>
+                <h1 id="issues-page-title">My Issues</h1>
                 <p class="text-secondary mt-1">Manage issues you raised or are assigned to resolve.</p>
             </div>
 
@@ -411,7 +411,10 @@
 
             const loadIssues = async () => {
                 try {
-                    const res = await API.fetchUserIssues(currentPage, currentLimit, activeTab);
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const queryUserId = urlParams.get('user_id') || 'me';
+                    
+                    const res = await API.fetchUserIssues(queryUserId, currentPage, currentLimit, activeTab);
                     allIssues = res.data.issues || [];
                     allLabels = res.data.labels || [];
 
@@ -423,6 +426,12 @@
                         opt.textContent = lbl;
                         labelFilter.appendChild(opt);
                     });
+
+                    if (queryUserId !== 'me') {
+                        document.getElementById('issues-page-title').textContent = "User's Issues";
+                    } else {
+                        document.getElementById('issues-page-title').textContent = "My Issues";
+                    }
 
                     renderIssues();
                     
