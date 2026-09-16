@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -277,7 +277,7 @@
                             <i class="ph ph-check-circle"></i> Verified
                         </div>
                         
-                        <a href="#" class="tech-btn" id="discord-link" target="_blank">Launch Server</a>
+                        <a href="#" class="tech-btn" id="discord-link" target="_blank">Join Server</a>
                     </div>
                 </div>
 
@@ -339,6 +339,7 @@
 
     <script src="/js/api.js"></script>
     <script src="/js/components.js"></script>
+    <script src="/js/notifications.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             if (!API.isAuthenticated()) {
@@ -391,6 +392,12 @@
                         Components.showToast('Discord linked & verified successfully!', 'success');
                         currentUser = await API.fetchUserMe();
                         updateDiscordUI(currentUser);
+                        
+                        // Open Discord server in a new tab
+                        const config = await API.getConfig();
+                        if (config && config.DISCORD_INVITE_URL) {
+                            window.open(config.DISCORD_INVITE_URL, '_blank');
+                        }
                     } catch (e) {
                         Components.showToast('Verification failed: ' + e.message, 'error');
                     } finally {
