@@ -78,19 +78,19 @@ const Components = {
 
     // Inject trial mode banner at the absolute top of the body
     const trialBannerHtml = `
-      <div id="trial-mode-banner" style="position: absolute; top: 0; left: 0; width: 100%; background: rgba(255, 166, 0, 0.15); border-bottom: 1px solid rgba(255, 166, 0, 0.3); color: #ffb84d; text-align: center; padding: 0.75rem 1rem; font-weight: 500; font-size: 0.95rem; z-index: 10;">
-        🚧 <strong>Trial Mode Active:</strong> The platform is currently in testing mode. The official event and leaderboard scoring begin on <strong>October 4th</strong>.
+      <div id="trial-mode-banner" style="position: relative; top: 0; left: 0; width: 100%; overflow: hidden; background: rgba(255, 166, 0, 0.15); border-bottom: 1px solid rgba(255, 166, 0, 0.3); color: #ffb84d; padding: 0.75rem 0; font-weight: 500; font-size: 0.95rem; z-index: 10;">
+        <div class="marquee-text">
+            🚧 <strong>Trial Mode Active:</strong> The platform is currently in trial mode. The official event and leaderboard scoring begins on <strong>October 4th</strong>.
+        </div>
       </div>
     `;
     
     if (!document.getElementById("trial-mode-banner")) {
         document.body.insertAdjacentHTML("afterbegin", trialBannerHtml);
         
-        // Add top padding to the app-wrapper so it isn't covered by the absolute banner
         const wrapper = document.querySelector(".app-wrapper") || document.body;
         const banner = document.getElementById("trial-mode-banner");
         if (wrapper && banner) {
-            wrapper.style.paddingTop = banner.offsetHeight + 'px';
             // Force enough height so even short pages can scroll past the banner
             wrapper.style.minHeight = `calc(100vh + ${banner.offsetHeight}px)`;
         }
@@ -336,6 +336,89 @@ const Components = {
 
     const limitSelect = container.querySelector('#pagination-limit-select');
     if (limitSelect) limitSelect.addEventListener('change', (e) => onLimitChange(parseInt(e.target.value)));
+  },
+
+  renderSearchFilterBar(config) {
+    const container = document.getElementById(config.containerId);
+    if (!container) return;
+
+    let html = `<div class="unified-search-bar" ${config.style ? `style="${config.style}"` : ''}>`;
+    
+    // Search input
+    if (config.search) {
+      html += `
+        <div class="unified-search-input-section">
+            <i class="ph ph-magnifying-glass unified-search-icon"></i>
+            <input type="text" id="${config.search.id}" class="unified-search-input" placeholder="${config.search.placeholder}" autocomplete="off">
+            <div class="unified-search-actions">
+                <button type="button" class="unified-search-clear" title="Clear search" onclick="document.getElementById('${config.search.id}').value=''; document.getElementById('${config.search.id}').dispatchEvent(new Event('input')); document.getElementById('${config.search.id}').focus();">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+        </div>
+      `;
+    }
+
+    // Filters
+    if (config.filters && config.filters.length > 0) {
+      config.filters.forEach(filter => {
+        if (config.search || config.filters[0] !== filter) {
+          html += `<div class="unified-search-divider"></div>`;
+        }
+        html += `
+          <div class="unified-search-filter">
+              <i class="ph ${filter.icon} unified-search-filter-icon"></i>
+              <select id="${filter.id}" class="unified-search-select">
+                  ${filter.optionsHtml}
+              </select>
+          </div>
+        `;
+      });
+    }
+
+    // Sort
+    if (config.sort) {
+      if (config.search || (config.filters && config.filters.length > 0)) {
+        html += `<div class="unified-search-divider"></div>`;
+      }
+      let sortHtml = `
+        <div class="unified-search-filter" style="display: flex; align-items: stretch; flex: 0 0 auto;">
+            <div style="position: relative; flex: 1; display: flex; align-items: center;">
+                <i class="ph ${config.sort.icon} unified-search-filter-icon"></i>
+                <select id="${config.sort.id}" class="unified-search-select" style="width: 100%;">
+                    ${config.sort.optionsHtml}
+                </select>
+            </div>
+      `;
+      if (config.sort.dirBtnId) {
+        sortHtml += `
+            <button id="${config.sort.dirBtnId}" title="Toggle Sort Direction" style="background: transparent; border: none; padding: 0 1rem; color: var(--text-secondary); cursor: pointer; border-left: 1px solid rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: center; transition: background 0.2s, color 0.2s;" onmouseover="this.style.color='var(--text-primary)'; this.style.background='rgba(255,255,255,0.1)';" onmouseout="this.style.color='var(--text-secondary)'; this.style.background='transparent';">
+                <i id="${config.sort.dirIconId}" class="ph ${config.sort.dirIcon}" style="font-size: 1.2rem;"></i>
+            </button>
+        `;
+      }
+      sortHtml += `</div>`;
+      html += sortHtml;
+    }
+
+    // Actions
+    if (config.actions && config.actions.length > 0) {
+        if (config.search || (config.filters && config.filters.length > 0) || config.sort) {
+            html += `<div class="unified-search-divider"></div>`;
+        }
+        html += `<div class="unified-search-actions-group" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem;">`;
+        config.actions.forEach(action => {
+            html += `
+                <button id="${action.id}" class="btn ${action.class || 'btn-secondary'}" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; height: 32px; flex-shrink: 0;">
+                    ${action.icon ? `<i class="ph ${action.icon}"></i>` : ''} ${action.label}
+                </button>
+            `;
+        });
+        html += `</div>`;
+    }
+
+    html += `</div>`;
+    container.innerHTML = html;
   },
 
   getTagStyles(labelInput, fallbackColor = null) {
