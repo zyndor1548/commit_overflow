@@ -52,6 +52,9 @@
             font-size: 0.875rem;
             color: var(--text-secondary);
         }
+        .repo-meta div.meta-full {
+            grid-column: 1 / -1;
+        }
         .repo-meta div {
             display: flex;
             align-items: center;
@@ -395,6 +398,7 @@
                         <option value="name">Sort: Name</option>
                         <option value="contributors">Sort: Contributors</option>
                         <option value="open_issues">Sort: Open Issues</option>
+                        <option value="closed_issues">Sort: Closed Issues</option>
                         <option value="open_prs">Sort: Open PRs</option>
                         <option value="merged_prs">Sort: Merged PRs</option>
                     `,
@@ -412,7 +416,15 @@
             const sortRepoIcon = document.getElementById('sort-repo-icon');
             let currentSortDir = 'desc'; // Default to descending for most metrics
 
-
+            // Restore saved filter settings
+            const savedRepoSettings = Components.getSearchSettings('repositories') || {};
+            if (savedRepoSettings.q && reposSearchInput) reposSearchInput.value = savedRepoSettings.q;
+            if (savedRepoSettings.plat && filterPlatform) filterPlatform.value = savedRepoSettings.plat;
+            if (savedRepoSettings.sort && sortRepo) sortRepo.value = savedRepoSettings.sort;
+            if (savedRepoSettings.dir) {
+                currentSortDir = savedRepoSettings.dir;
+                if (sortRepoIcon) sortRepoIcon.className = currentSortDir === 'asc' ? 'ph ph-sort-ascending text-primary' : 'ph ph-sort-descending text-primary';
+            }
 
             const renderRepos = () => {
                 if (!reposContainer) return;
@@ -466,8 +478,9 @@
                             ${techBadges}
                         </div>
                         <div class="repo-meta">
-                            <div><i class="ph ph-users-three text-primary"></i> <span>Contributors: <strong class="text-primary">${repo.contributor_count}</strong></span></div>
+                            <div class="meta-full"><i class="ph ph-users-three text-primary"></i> <span>Contributors: <strong class="text-primary">${repo.contributor_count}</strong></span></div>
                             <div><i class="ph ph-warning-circle text-primary"></i> <span>Open Issues: <strong style="color: #d29922;">${repo.open_issues}</strong></span></div>
+                            <div><i class="ph ph-check-circle text-primary"></i> <span>Closed Issues: <strong style="color: #8957e5;">${repo.closed_issues || 0}</strong></span></div>
                             <div><i class="ph ph-git-pull-request text-primary"></i> <span>Open PRs: <strong style="color: #a371f7;">${repo.open_prs}</strong></span></div>
                             <div><i class="ph ph-git-merge text-primary"></i> <span>Merged PRs: <strong style="color: #3fb950;">${repo.merged_prs}</strong></span></div>
                         </div>
@@ -508,6 +521,13 @@
 
             const handleFilterChange = () => {
                 currentPage = 1;
+                Components.saveSearchSettings('repositories', {
+                    q: reposSearchInput ? reposSearchInput.value : '',
+                    lang: filterLanguage ? filterLanguage.value : '',
+                    plat: filterPlatform ? filterPlatform.value : '',
+                    sort: sortRepo ? sortRepo.value : '',
+                    dir: currentSortDir
+                });
                 loadRepos();
             };
 
@@ -534,7 +554,7 @@
             const loadRepos = async () => {
                 try {
                     const q = reposSearchInput ? reposSearchInput.value : '';
-                    const lang = filterLanguage ? filterLanguage.value : '';
+                    const lang = (filterLanguage && filterLanguage.value) || (savedRepoSettings && savedRepoSettings.lang) || '';
                     const plat = filterPlatform ? filterPlatform.value : '';
                     const sortBy = sortRepo ? sortRepo.value : '';
                     
@@ -562,6 +582,9 @@
                                 opt.textContent = tech;
                                 filterLanguage.appendChild(opt);
                             });
+                            if (savedRepoSettings.lang) {
+                                filterLanguage.value = savedRepoSettings.lang;
+                            }
                         }
                     }
 

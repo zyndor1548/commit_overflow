@@ -236,8 +236,20 @@
 
             let allIssues = [];
             let allLabels = [];
-            let activeTab = 'open'; // 'open', 'closed', 'assigned'
+            const urlParams = new URLSearchParams(window.location.search);
+            const savedIssueSettings = Components.getSearchSettings('issues') || {};
+            let activeTab = urlParams.get('tab') || savedIssueSettings.type || 'open'; // 'open', 'closed', 'assigned', 'managed'
             const user = API.getCurrentUser();
+            const isMentorOrAdmin = user && (user.is_admin || user.is_super_admin);
+
+            let typeOptionsHtml = `
+                <option value="open" ${activeTab === 'open' ? 'selected' : ''}>Type: Open</option>
+                <option value="closed" ${activeTab === 'closed' ? 'selected' : ''}>Type: Closed</option>
+                <option value="assigned" ${activeTab === 'assigned' ? 'selected' : ''}>Type: Assigned</option>
+            `;
+            if (isMentorOrAdmin) {
+                typeOptionsHtml += `<option value="managed" ${activeTab === 'managed' ? 'selected' : ''}>Type: Managed Repos</option>`;
+            }
 
             Components.renderSearchFilterBar({
                 containerId: 'search-filter-container',
@@ -254,11 +266,7 @@
                     {
                         id: 'filter-type',
                         icon: 'ph-git-merge',
-                        optionsHtml: `
-                            <option value="open">Type: Open</option>
-                            <option value="closed">Type: Closed</option>
-                            <option value="assigned">Type: Assigned</option>
-                        `
+                        optionsHtml: typeOptionsHtml
                     }
                 ]
             });
@@ -267,6 +275,21 @@
             const labelFilter = document.getElementById('filter-label');
             const typeFilter = document.getElementById('filter-type');
             const issuesListContainer = document.getElementById('issues-list');
+
+            if (savedIssueSettings.search && searchInput) {
+                searchInput.value = savedIssueSettings.search;
+            }
+            if (typeFilter) {
+                typeFilter.value = activeTab;
+            }
+
+            const saveIssueFilters = () => {
+                Components.saveSearchSettings('issues', {
+                    search: searchInput ? searchInput.value.trim() : '',
+                    type: activeTab,
+                    label: labelFilter ? labelFilter.value : ''
+                });
+            };
 
             const renderIssues = () => {
                 const selectedLabel = labelFilter.value;
@@ -347,10 +370,13 @@
                         ? `${issue.repo_url}/-/issues/${issueNumber}`
                         : `${issue.repo_url}/issues/${issueNumber}`;
 
+                    const creatorName = issue.creator_username ? `@${issue.creator_username}` : (issue.user_id === user.id ? 'You' : 'System');
+                    const assigneeName = issue.assignee_id ? (issue.assignee_id === user.id ? 'You' : (issue.assignee_username ? `@${issue.assignee_username}` : 'Assigned')) : 'Unassigned';
+
                     let metaHtml = `
                         <div class="issue-meta-info">
-                            <span><i class="ph ph-user text-primary"></i> Creator: <strong>${issue.user_id === user.id ? 'You' : 'System'}</strong></span>
-                            <span><i class="ph ph-user-focus ${issue.assignee_id ? 'text-success' : 'text-secondary'}"></i> Assignee: <strong style="${issue.assignee_id ? '' : 'color: var(--text-secondary); font-weight: normal;'}">${issue.assignee_id ? (issue.assignee_id === user.id ? 'You' : 'Assigned') : 'Unassigned'}</strong></span>
+                            <span><i class="ph ph-user text-primary"></i> Creator: <strong>${creatorName}</strong></span>
+                            <span><i class="ph ph-user-focus ${issue.assignee_id ? 'text-success' : 'text-secondary'}"></i> Assignee: <strong style="${issue.assignee_id ? '' : 'color: var(--text-secondary); font-weight: normal;'}">${assigneeName}</strong></span>
                     `;
                     
                     if (issue.deadline_at) metaHtml += `<span><i class="ph ph-calendar-blank text-warning"></i> Deadline: ${deadlineText}</span>`;
@@ -391,6 +417,7 @@
             typeFilter.addEventListener('change', (e) => {
                 activeTab = e.target.value;
                 currentPage = 1;
+                saveIssueFilters();
                 loadIssues();
             });
 
@@ -399,11 +426,15 @@
                 clearTimeout(searchTimer);
                 searchTimer = setTimeout(() => {
                     currentPage = 1;
+                    saveIssueFilters();
                     loadIssues();
                 }, 400);
             });
 
-            labelFilter.addEventListener('change', renderIssues);
+            labelFilter.addEventListener('change', () => {
+                saveIssueFilters();
+                renderIssues();
+            });
 
             let currentPage = 1;
             let currentLimit = 10;
@@ -426,9 +457,14 @@
                             opt.textContent = lbl;
                             labelFilter.appendChild(opt);
                         });
+                        if (savedIssueSettings.label) {
+                            labelFilter.value = savedIssueSettings.label;
+                        }
                     }
 
-                    if (queryUserId !== 'me') {
+                    if (activeTab === 'managed') {
+                        document.getElementById('issues-page-title').textContent = "Managed Repository Issues";
+                    } else if (queryUserId !== 'me') {
                         document.getElementById('issues-page-title').textContent = "User's Issues";
                     } else {
                         document.getElementById('issues-page-title').textContent = "My Issues";

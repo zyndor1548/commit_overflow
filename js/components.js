@@ -52,7 +52,8 @@ const Components = {
           ${(() => {
             try {
               const u = JSON.parse(localStorage.getItem('currentUser') || '{}');
-              if (u && u.is_admin) {
+              if (u && (u.is_admin || u.is_super_admin)) {
+                const adminPortalUrl = sessionStorage.getItem('api_base_url') || '/';
                 return `<a href="/admin/broadcasts/" title="Broadcasts" class="nav-item ${activePage === "broadcasts" ? "active" : ""}">
                   <i class="ph ph-megaphone"></i> <span class="sidebar-text">Broadcasts</span>
                 </a>`;
@@ -426,5 +427,29 @@ const Components = {
     for (let i = 0; i < label.length; i++) { hash = label.charCodeAt(i) + ((hash << 5) - hash); }
     const h = Math.abs(hash) % 360;
     return { border: `hsl(${h}, 55%, 55%)`, bg: `hsla(${h}, 55%, 55%, 0.1)`, text: `hsl(${h}, 55%, 65%)` };
+  },
+
+  saveSearchSettings(pageKey, settings) {
+    try {
+      localStorage.setItem('search_settings_' + pageKey, JSON.stringify(settings));
+    } catch (e) {
+      console.warn('Failed to save search settings', e);
+    }
+  },
+
+  getSearchSettings(pageKey) {
+    try {
+      const data = localStorage.getItem('search_settings_' + pageKey);
+      return data ? JSON.parse(data) : null;
+    } catch (e) {
+      console.warn('Failed to get search settings', e);
+      return null;
+    }
+  },
+
+  clearSearchSettings(pageKey) {
+    try {
+      localStorage.removeItem('search_settings_' + pageKey);
+    } catch (e) {}
   }
 };
